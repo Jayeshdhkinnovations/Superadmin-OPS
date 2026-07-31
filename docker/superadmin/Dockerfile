@@ -24,7 +24,7 @@ RUN npm run build
 
 # ---- Stage 2: backend + Nginx serving the built frontend ----
 FROM node:20-alpine
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx docker-cli
 
 WORKDIR /app
 COPY apps/SuperAdminServer/package*.json ./
