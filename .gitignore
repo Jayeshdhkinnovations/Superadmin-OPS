@@ -5,8 +5,8 @@ node_modules/
 dist/
 dist-ssr/
 
-# Runtime-generated log files
-logs/
+# Runtime-generated log files (not the frontend's src/components/logs/ code)
+apps/SuperAdminServer/logs/
 
 # Secrets - never commit real keys/connection strings
 .env
