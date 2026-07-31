@@ -1,4 +1,4 @@
-import Parse from 'parse/node.js';
+import Parse from 'parse/node';
 import dotenv from 'dotenv';
 dotenv.config();
 
