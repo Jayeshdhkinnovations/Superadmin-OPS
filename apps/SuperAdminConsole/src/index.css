@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: opensigncss --default;
+}
+
+@plugin "daisyui/theme" {
+  name: "opensigncss";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-primary: #3f6b52;
+  --color-primary-content: #ffffff;
+  --color-secondary: #f0f5f1;
+  --color-secondary-content: #1c2620;
+  --color-accent: #6b9080;
+  --color-accent-content: #ffffff;
+  --color-neutral: #e1e8e3;
+  --color-neutral-content: #33473b;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7faf8;
+  --color-base-300: #eff4f1;
+  --color-base-content: #14201a;
+  --color-info: #4c7f82;
+  --color-info-content: #ffffff;
+  --color-success: #4b7a5a;
+  --color-success-content: #ffffff;
+  --color-warning: #9c7a3c;
+  --color-warning-content: #ffffff;
+  --color-error: #a0453f;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --animate-in-fade: fade-in 0.15s ease-out;
+  --animate-in-scale: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-base-100 text-base-content antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-base-300) transparent;
+}
+
+.animate-fade-in {
+  animation: var(--animate-in-fade);
+}
+
+.animate-scale-in {
+  animation: var(--animate-in-scale);
+}

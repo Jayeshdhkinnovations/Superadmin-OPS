@@ -1,0 +1,25 @@
+{
+  "name": "superadmin_server",
+  "version": "1.0.0",
+  "description": "Control plane backend for the OpenSign Super Admin Console - provisions and manages per-company OpenSign instances",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "watch": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongodb": "^7.2.0",
+    "parse": "^8.6.0",
+    "parse-server": "^8.6.84"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": "18 || 20 || 22"
+  }
+}

@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Runtime-generated log files
+logs/
+
+# Secrets - never commit real keys/connection strings
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor/OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+.vercel
