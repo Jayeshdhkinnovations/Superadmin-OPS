@@ -22,8 +22,8 @@ export default function Overview() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </div>
@@ -40,7 +40,8 @@ export default function Overview() {
               sublabel: `${data.suspendedCompanies} suspended`,
             },
             { label: "Total Users", value: formatNumber(data.totalUsers) },
-            { label: "Total Documents", value: formatNumber(data.totalDocuments) },
+            { label: "Documents Signed", value: formatNumber(data.totalDocumentsSigned) },
+            { label: "Templates Count", value: formatNumber(data.totalTemplates) },
             { label: "Storage Used", value: formatBytes(data.totalStorageBytes) },
           ]}
         />
