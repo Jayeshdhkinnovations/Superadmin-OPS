@@ -1,7 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { removeCompanyContainer } from '../services/dockerManager.js';
-import { removeRoute } from '../services/proxyManager.js';
-import { stopCompanyFrontend } from '../services/frontendManager.js';
+import { openSignInternalUrl, openSignInternalAdminSecret } from '../Utils.js';
 import { requireSuperAdmin } from './authGuard.js';
 import { writeAuditLog } from './getAuditLogs.js';
 import { writeSystemLog } from './getSystemLogs.js';
@@ -23,9 +21,21 @@ export default async function deleteCompany(request) {
     throw new Parse.Error(422, 'Company name confirmation did not match. Nothing was deleted.');
   }
 
-  // 1. Stop and remove their running instance (backend container + frontend).
-  await removeCompanyContainer(company.get('containerName'));
-  stopCompanyFrontend(company.get('subdomain'));
+  // 1. Tell the shared OpenSign container to stop answering requests for
+  // this company immediately, before dropping its database out from
+  // under the still-live mount.
+  await fetch(`${openSignInternalUrl}/admin/unmount-company`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': openSignInternalAdminSecret,
+    },
+    body: JSON.stringify({ slug: company.get('subdomain') }),
+  }).catch((err) => {
+    // Don't block deletion on this - worst case the mount lingers until
+    // the container restarts, same as before this endpoint existed.
+    console.log(`deleteCompany: failed to unmount "${company.get('subdomain')}": ${err.message}`);
+  });
 
   // 2. Permanently drop their entire database.
   const mongoUri = process.env.MONGODB_URI.replace(/\/[^/]+$/, `/${company.get('databaseName')}`);
@@ -34,10 +44,7 @@ export default async function deleteCompany(request) {
   await client.db().dropDatabase();
   await client.close();
 
-  // 3. Remove their subdomain route.
-  await removeRoute({ subdomain: company.get('subdomain') });
-
-  // 4. Remove their entry from the control plane.
+  // 3. Remove their entry from the control plane.
   await company.destroy({ useMasterKey: true });
 
   await writeAuditLog({
@@ -51,7 +58,7 @@ export default async function deleteCompany(request) {
   await writeSystemLog({
     level: 'info',
     route: 'functions/deletecompany',
-    message: `Company "${before.companyName}" deleted - container, frontend, and database removed.`,
+    message: `Company "${before.companyName}" deleted - database removed.`,
     companyName: before.companyName,
   }).catch(() => {});
 

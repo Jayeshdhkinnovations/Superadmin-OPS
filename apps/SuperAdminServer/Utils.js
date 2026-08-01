@@ -34,6 +34,19 @@ export const companyFrontendPortRangeStart = parseInt(
   10
 );
 
+// The shared OpenSign container (docker/opensign) - one frontend+backend
+// for every company, each mounted at /app/<slug> inside it, instead of a
+// separate container per company. openSignInternalUrl is how *this*
+// server reaches it (its Docker network container name in production,
+// e.g. http://opensign:80); openSignPublicOrigin is what real users see
+// in their browser (e.g. https://sign.toowix.com), used only to build the
+// login URL shown to the Super Admin after provisioning.
+export const openSignInternalUrl = process.env.OPENSIGN_INTERNAL_URL || 'http://localhost:3001';
+export const openSignPublicOrigin = process.env.OPENSIGN_PUBLIC_ORIGIN || openSignInternalUrl;
+// Must match INTERNAL_ADMIN_SECRET on the OpenSign container exactly -
+// required to call its POST /admin/mount-company endpoint.
+export const openSignInternalAdminSecret = process.env.OPENSIGN_INTERNAL_ADMIN_SECRET;
+
 // Turns a company name like "Jayesh Hospital Pvt Ltd" into a safe MongoDB
 // database name and a safe subdomain slug - lowercase, letters/numbers only.
 export function slugifyCompanyName(companyName) {

@@ -1,19 +1,7 @@
-import { restartCompanyContainer } from '../services/dockerManager.js';
-import { registerRoute } from '../services/proxyManager.js';
-import { startCompanyFrontend } from '../services/frontendManager.js';
-import { companyFrontendPortRangeStart } from '../Utils.js';
+import { openSignInternalUrl, openSignInternalAdminSecret } from '../Utils.js';
 import { requireSuperAdmin } from './authGuard.js';
 import { writeAuditLog } from './getAuditLogs.js';
 import { writeSystemLog } from './getSystemLogs.js';
-
-async function nextAvailableFrontendPort() {
-  const query = new Parse.Query('Company');
-  query.descending('frontendPort');
-  const highest = await query.first({ useMasterKey: true });
-  return highest && highest.get('frontendPort')
-    ? highest.get('frontendPort') + 1
-    : companyFrontendPortRangeStart;
-}
 
 export default async function reactivateCompany(request) {
   requireSuperAdmin(request);
@@ -24,21 +12,21 @@ export default async function reactivateCompany(request) {
   const company = await new Parse.Query('Company').get(id, { useMasterKey: true });
   const before = company.toJSON();
 
-  await restartCompanyContainer(company.get('containerName'));
-  await registerRoute({ subdomain: company.get('subdomain'), port: company.get('port') });
-
-  // Older companies (created before per-company frontends existed) won't
-  // have a frontendPort yet - assign one now instead of failing.
-  let frontendPort = company.get('frontendPort');
-  if (!frontendPort) {
-    frontendPort = await nextAvailableFrontendPort();
-    company.set('frontendPort', frontendPort);
-  }
-  await startCompanyFrontend({
-    slug: company.get('subdomain'),
-    backendPort: company.get('port'),
-    frontendPort,
-  });
+  // Since suspend never actually removes the live mount (see
+  // suspendCompany.js's note), this call is normally a harmless no-op -
+  // mountCompany() already returns { alreadyMounted: true } instead of
+  // re-mounting. It matters for the case where the OpenSign container
+  // restarted while this company was suspended, since only *active*
+  // companies get auto-remounted on startup (see multiTenant.js).
+  const mountRes = await fetch(`${openSignInternalUrl}/admin/mount-company`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': openSignInternalAdminSecret,
+    },
+    body: JSON.stringify({ slug: company.get('subdomain'), databaseName: company.get('databaseName') }),
+  }).then((r) => r.json());
+  if (mountRes.error) throw new Error(`Failed remounting company on OpenSign: ${mountRes.error}`);
 
   company.set('status', 'active');
   await company.save(null, { useMasterKey: true });
@@ -54,7 +42,7 @@ export default async function reactivateCompany(request) {
   await writeSystemLog({
     level: 'info',
     route: 'functions/reactivatecompany',
-    message: `Company "${company.get('companyName')}" reactivated - instance restarted.`,
+    message: `Company "${company.get('companyName')}" reactivated.`,
     companyName: company.get('companyName'),
   }).catch(() => {});
 

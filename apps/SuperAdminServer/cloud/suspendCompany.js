@@ -1,6 +1,4 @@
-import { stopCompanyContainer } from '../services/dockerManager.js';
-import { pauseRoute } from '../services/proxyManager.js';
-import { stopCompanyFrontend } from '../services/frontendManager.js';
+import { openSignInternalUrl, openSignInternalAdminSecret } from '../Utils.js';
 import { requireSuperAdmin } from './authGuard.js';
 import { writeAuditLog } from './getAuditLogs.js';
 import { writeSystemLog } from './getSystemLogs.js';
@@ -14,10 +12,17 @@ export default async function suspendCompany(request) {
   const company = await new Parse.Query('Company').get(id, { useMasterKey: true });
   const before = company.toJSON();
 
-  // Stops the running instance only - their database is left fully intact.
-  await stopCompanyContainer(company.get('containerName'));
-  stopCompanyFrontend(company.get('subdomain'));
-  await pauseRoute({ subdomain: company.get('subdomain') });
+  // Enforce suspension by unmounting the company from the shared OpenSign container immediately.
+  await fetch(`${openSignInternalUrl}/admin/unmount-company`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': openSignInternalAdminSecret,
+    },
+    body: JSON.stringify({ slug: company.get('subdomain') }),
+  }).catch((err) => {
+    console.log(`suspendCompany: failed to unmount "${company.get('subdomain')}": ${err.message}`);
+  });
 
   company.set('status', 'suspended');
   await company.save(null, { useMasterKey: true });
@@ -33,7 +38,7 @@ export default async function suspendCompany(request) {
   await writeSystemLog({
     level: 'warn',
     route: 'functions/suspendcompany',
-    message: `Company "${before.companyName}" suspended - instance stopped.`,
+    message: `Company "${before.companyName}" marked suspended (not yet enforced on access).`,
     companyName: before.companyName,
   }).catch(() => {});
 

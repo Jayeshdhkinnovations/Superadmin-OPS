@@ -102,11 +102,13 @@ export default function CompanyTable({
                       className="flex items-center justify-end gap-0"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {c.status === "active" && c.frontendPort && (
+                      {c.status === "active" && (
                         <RowAction
                           label="Open company login"
                           icon={ExternalLink}
-                          onClick={() => window.open(`http://localhost:${c.frontendPort}`, "_blank")}
+                          onClick={() =>
+                            window.open(import.meta.env.VITE_OPENSIGN_PUBLIC_URL, "_blank")
+                          }
                         />
                       )}
                       <RowAction label="View" icon={Eye} onClick={() => onView(c)} />

@@ -1,50 +1,15 @@
-import { startCompanyContainer, removeCompanyContainer } from '../services/dockerManager.js';
-import { registerRoute } from '../services/proxyManager.js';
-import { startCompanyFrontend, stopCompanyFrontend } from '../services/frontendManager.js';
 import {
   slugifyCompanyName,
   companyMasterKey,
   companyAppId,
-  companyPortRangeStart,
-  companyFrontendPortRangeStart,
+  openSignInternalUrl,
+  openSignPublicOrigin,
+  openSignInternalAdminSecret,
   generateSecureTempPassword,
 } from '../Utils.js';
 import { writeAuditLog } from './getAuditLogs.js';
 import { writeSystemLog } from './getSystemLogs.js';
 import { requireSuperAdmin } from './authGuard.js';
-
-// Waits for a freshly-started container's Parse Server to actually answer,
-// since it takes a few seconds to boot - same "poll until healthy" pattern
-// used throughout today's manual testing.
-async function waitUntilHealthy(url, timeoutMs = 30000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return true;
-    } catch {
-      // not up yet, keep waiting
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  throw new Error(`Company instance at ${url} did not become healthy in time`);
-}
-
-async function nextAvailablePort() {
-  const query = new Parse.Query('Company');
-  query.descending('port');
-  const highest = await query.first({ useMasterKey: true });
-  return highest ? highest.get('port') + 1 : companyPortRangeStart;
-}
-
-async function nextAvailableFrontendPort() {
-  const query = new Parse.Query('Company');
-  query.descending('frontendPort');
-  const highest = await query.first({ useMasterKey: true });
-  return highest && highest.get('frontendPort')
-    ? highest.get('frontendPort') + 1
-    : companyFrontendPortRangeStart;
-}
 
 export default async function createCompany(request) {
   requireSuperAdmin(request);
@@ -65,48 +30,59 @@ export default async function createCompany(request) {
   }
 
   const databaseName = `${slug}_DB`;
-  const containerName = `opensign-company-${slug}`;
-  const port = await nextAvailablePort();
-  const frontendPort = await nextAvailableFrontendPort();
   const adminTempPassword = generateSecureTempPassword();
 
   // Reserve the company record immediately, in "provisioning" state - this
   // is what lets a failure below be cleanly detected and rolled back instead
   // of leaving an orphaned, half-created company (see Property 2 in
   // requirements.md - provisioning must be all-or-nothing).
+  //
+  // Note: unlike the old per-company-container design, there's no
+  // "container" or dedicated port to record anymore - every company shares
+  // the one running OpenSign container, distinguished only by subdomain.
   const Company = Parse.Object.extend('Company');
   const company = new Company();
   company.set('companyName', companyName);
   company.set('adminEmail', adminEmail);
   company.set('subdomain', slug);
   company.set('databaseName', databaseName);
-  company.set('containerName', containerName);
-  company.set('port', port);
-  company.set('frontendPort', frontendPort);
   company.set('maxUsers', maxUsers);
   company.set('currentUserCount', 1);
   company.set('status', 'provisioning');
   await company.save(null, { useMasterKey: true });
 
-  try {
-    // 1. Start their dedicated OpenSignServer container, pointed at a brand
-    // new database (MongoDB creates it automatically on first write).
-    await startCompanyContainer({ containerName, hostPort: port, databaseName });
+  // All requests to this company go to the shared OpenSign container, at
+  // its own path - the mount handles routing to the right database.
+  const companyServerUrl = `${openSignInternalUrl}/app/${slug}`;
 
-    const companyServerUrl = `http://localhost:${port}`;
-    await waitUntilHealthy(companyServerUrl);
+  try {
+    // 1. Tell the already-running OpenSign container to mount this
+    // company's database live - no restart, no new container, and every
+    // other company's active session is completely unaffected.
+    if (!openSignInternalAdminSecret) {
+      throw new Error('OPENSIGN_INTERNAL_ADMIN_SECRET is not configured on SuperAdminServer.');
+    }
+    const mountRes = await fetch(`${openSignInternalUrl}/admin/mount-company`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': openSignInternalAdminSecret,
+      },
+      body: JSON.stringify({ slug, databaseName }),
+    }).then((r) => r.json());
+    if (mountRes.error) throw new Error(`Failed mounting company on OpenSign: ${mountRes.error}`);
 
     // 2. Create the admin login + Tenant/Organization/Team/profile chain
-    // inside their new instance, via ITS OWN API with master key access -
-    // the exact same chain that already happens automatically during
-    // normal OpenSign sign-up, just triggered here instead of self-service.
+    // inside their new mount, via ITS OWN API with master key access - the
+    // exact same chain that already happens automatically during normal
+    // OpenSign sign-up, just triggered here instead of self-service.
     const headers = {
       'Content-Type': 'application/json',
       'X-Parse-Application-Id': companyAppId,
       'X-Parse-Master-Key': companyMasterKey,
     };
 
-    const userRes = await fetch(`${companyServerUrl}/app/users`, {
+    const userRes = await fetch(`${companyServerUrl}/users`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ username: adminEmail, password: adminTempPassword, email: adminEmail, name: adminName }),
@@ -114,7 +90,7 @@ export default async function createCompany(request) {
     if (!userRes.objectId) throw new Error(`Failed creating admin login: ${JSON.stringify(userRes)}`);
     const userId = userRes.objectId;
 
-    const tenantRes = await fetch(`${companyServerUrl}/app/classes/partners_Tenant`, {
+    const tenantRes = await fetch(`${companyServerUrl}/classes/partners_Tenant`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -130,7 +106,7 @@ export default async function createCompany(request) {
     if (!tenantRes.objectId) throw new Error(`Failed creating tenant: ${JSON.stringify(tenantRes)}`);
     const tenantId = tenantRes.objectId;
 
-    const orgRes = await fetch(`${companyServerUrl}/app/classes/contracts_Organizations`, {
+    const orgRes = await fetch(`${companyServerUrl}/classes/contracts_Organizations`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -143,7 +119,7 @@ export default async function createCompany(request) {
     if (!orgRes.objectId) throw new Error(`Failed creating organization: ${JSON.stringify(orgRes)}`);
     const orgId = orgRes.objectId;
 
-    const teamRes = await fetch(`${companyServerUrl}/app/classes/contracts_Teams`, {
+    const teamRes = await fetch(`${companyServerUrl}/classes/contracts_Teams`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -155,7 +131,7 @@ export default async function createCompany(request) {
     if (!teamRes.objectId) throw new Error(`Failed creating team: ${JSON.stringify(teamRes)}`);
     const teamId = teamRes.objectId;
 
-    const profileRes = await fetch(`${companyServerUrl}/app/classes/contracts_Users`, {
+    const profileRes = await fetch(`${companyServerUrl}/classes/contracts_Users`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -176,35 +152,18 @@ export default async function createCompany(request) {
     // this, a brand-new company's admin hits "Permission denied" the very
     // first time they create a folder/document/contact/template - Parse
     // Server refuses non-master-key writes to a class that doesn't exist
-    // yet (allowClientClassCreation is off).
-    //
-    // This used to create one throwaway object per class and immediately
-    // delete it, but contracts_Document has a real afterSave trigger
-    // (DocumentAftersave, in OpenSignServer) that does async PDF work off
-    // a placeholder object with none of the fields it expects - by the time
-    // it runs, the delete above had already removed the object, so it threw
-    // an uncaught "Object not found" that crashed the whole container
-    // (confirmed via `docker logs`, exit code 7). Declaring the class
-    // directly through the Schema API instead never creates an object, so
-    // it never fires any beforeSave/afterSave trigger, and still leaves the
-    // class registered with the same open default CLP every other
-    // master-key-created class gets.
+    // yet (allowClientClassCreation is off). Declared through the Schema
+    // API (not a throwaway object) so it never fires any beforeSave/
+    // afterSave trigger on a placeholder that would crash on delete.
     for (const className of ['contracts_Document', 'contracts_Contactbook', 'contracts_Template']) {
-      await fetch(`${companyServerUrl}/app/schemas/${className}`, {
+      await fetch(`${companyServerUrl}/schemas/${className}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ className, fields: { Name: { type: 'String' } } }),
       }).then((r) => r.json());
     }
 
-    // 3. Register their subdomain route (no-op stub in testing mode).
-    await registerRoute({ subdomain: slug, port });
-
-    // 3b. Start their own dedicated frontend, pointed at this backend, so
-    // there's a real login page to click into - not just the raw API.
-    const frontendUrl = await startCompanyFrontend({ slug, backendPort: port, frontendPort });
-
-    // 4. Mark the company active now that every step succeeded.
+    // 3. Mark the company active now that every step succeeded.
     company.set('status', 'active');
     await company.save(null, { useMasterKey: true });
 
@@ -220,24 +179,31 @@ export default async function createCompany(request) {
       route: 'functions/createcompany',
       message: `Company "${companyName}" provisioned successfully.`,
       companyName,
-      meta: { subdomain: slug, port, frontendPort },
+      meta: { subdomain: slug },
     }).catch(() => {});
 
     return {
       companyId: company.id,
       companyName,
       subdomain: slug,
-      port,
       adminEmail,
       adminTempPassword,
-      loginUrl: frontendUrl,
+      // NOTE: the shared frontend doesn't yet know how to target a
+      // specific company's mount on its own (that needs the "email-first
+      // lookup" routing discussed separately, not built yet) - this is
+      // the one shared frontend URL, not a company-specific deep link.
+      loginUrl: openSignPublicOrigin,
       backendUrl: companyServerUrl,
     };
   } catch (err) {
-    // Roll back everything already done, so no orphaned half-created
-    // company is left behind (Property 2 - provisioning is all-or-nothing).
-    stopCompanyFrontend(slug);
-    await removeCompanyContainer(containerName);
+    // Unlike the old per-company-container design, there's no dedicated
+    // container/process to tear down - the mount lives inside the shared
+    // OpenSign container, and there's currently no "unmount" capability
+    // (Parse Server doesn't offer a clean way to detach a live mount).
+    // A failed company's mount, if it got that far, is simply left in
+    // place but harmless: with no matching Company record and an
+    // incomplete admin/tenant chain, nothing can actually log into it.
+    // Only the control-plane record is rolled back here.
     await company.destroy({ useMasterKey: true });
     throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, `Company provisioning failed and was rolled back: ${err.message}`);
   }
