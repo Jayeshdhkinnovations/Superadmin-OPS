@@ -120,4 +120,19 @@ export const superAdminService = {
     }
     return Parse.Cloud.run("getauditlogs", params);
   },
+
+  // Approval requests - users who registered themselves via OpenSign's
+  // signup form, waiting for a Super Admin to approve before their
+  // company/database actually gets created.
+  getApprovalRequests: async (params) => {
+    return Parse.Cloud.run("getapprovalrequests", params);
+  },
+
+  approveRequest: async (requestId, maxUsers) => {
+    return Parse.Cloud.run("approverequest", { requestId, maxUsers });
+  },
+
+  rejectRequest: async (requestId) => {
+    return Parse.Cloud.run("rejectrequest", { requestId });
+  },
 };

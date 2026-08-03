@@ -7,6 +7,7 @@ import Overview from "./pages/Overview";
 import Logs from "./pages/Logs";
 import Companies from "./pages/Companies";
 import AuditLog from "./pages/AuditLog";
+import Approval from "./pages/Approval";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/logs" element={<Logs />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/audit" element={<AuditLog />} />
+            <Route path="/approval" element={<Approval />} />
           </Route>
         </Route>
         <Route path="/" element={<Navigate to="/overview" replace />} />

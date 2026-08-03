@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, FileText, Building2, ClipboardList } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, ClipboardList, UserCheck } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
+  { label: "Approval", href: "/approval", icon: UserCheck },
   { label: "Logs", href: "/logs", icon: FileText },
   { label: "Companies", href: "/companies", icon: Building2 },
   { label: "Audit Log", href: "/audit", icon: ClipboardList },

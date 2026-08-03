@@ -8,6 +8,9 @@ import deleteCompany from './deleteCompany.js';
 import getPlatformStats from './getPlatformStats.js';
 import getSystemLogs, { writeSystemLog } from './getSystemLogs.js';
 import { getAuditLogs } from './getAuditLogs.js';
+import getApprovalRequests from './getApprovalRequests.js';
+import approveRequest from './approveRequest.js';
+import rejectRequest from './rejectRequest.js';
 import { requireSuperAdmin } from './authGuard.js';
 
 export default async function getme(request) {
@@ -53,3 +56,6 @@ Parse.Cloud.define('deletecompany', withErrorLogging('deletecompany', deleteComp
 Parse.Cloud.define('getplatformstats', withErrorLogging('getplatformstats', getPlatformStats));
 Parse.Cloud.define('getsystemlogs', withErrorLogging('getsystemlogs', getSystemLogs));
 Parse.Cloud.define('getauditlogs', withErrorLogging('getauditlogs', getAuditLogs));
+Parse.Cloud.define('getapprovalrequests', withErrorLogging('getapprovalrequests', getApprovalRequests));
+Parse.Cloud.define('approverequest', withErrorLogging('approverequest', approveRequest));
+Parse.Cloud.define('rejectrequest', withErrorLogging('rejectrequest', rejectRequest));
