@@ -5,6 +5,10 @@ import { companyMasterKey, companyAppId } from '../Utils.js';
 export default async function updateCompanyLimit(request) {
   requireSuperAdmin(request);
 
+  if (!companyMasterKey) {
+    throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, 'COMPANY_MASTER_KEY is not configured on SuperAdminServer.');
+  }
+
   const { id, maxUsers } = request.params;
   if (!id || !maxUsers || maxUsers < 1) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'id and a positive maxUsers are required.');

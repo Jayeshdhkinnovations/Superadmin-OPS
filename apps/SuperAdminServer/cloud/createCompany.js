@@ -14,6 +14,10 @@ import { requireSuperAdmin } from './authGuard.js';
 export default async function createCompany(request) {
   requireSuperAdmin(request);
 
+  if (!companyMasterKey) {
+    throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, 'COMPANY_MASTER_KEY is not configured on SuperAdminServer.');
+  }
+
   const { companyName, adminName, adminEmail, maxUsers } = request.params;
   if (!companyName || !adminName || !adminEmail || !maxUsers || maxUsers < 1) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'companyName, adminName, adminEmail and a positive maxUsers are all required.');
