@@ -55,6 +55,18 @@ export default async function createCompany(request) {
   // its own path - the mount handles routing to the right database.
   const companyServerUrl = `${openSignInternalUrl}/app/${slug}`;
 
+  // Tracked so the catch block below can actually delete whatever got
+  // created before the failure, instead of just abandoning it - a failed
+  // attempt that left a real _User behind would otherwise permanently
+  // block any retry with that same email ("Account already exists"),
+  // even though the company itself was never really created.
+  let userId, tenantId, profileId, orgId, teamId;
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Parse-Application-Id': companyAppId,
+    'X-Parse-Master-Key': companyMasterKey,
+  };
+
   try {
     // 1. Tell the already-running OpenSign container to mount this
     // company's database live - no restart, no new container, and every
@@ -76,19 +88,13 @@ export default async function createCompany(request) {
     // inside their new mount, via ITS OWN API with master key access - the
     // exact same chain that already happens automatically during normal
     // OpenSign sign-up, just triggered here instead of self-service.
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-Parse-Application-Id': companyAppId,
-      'X-Parse-Master-Key': companyMasterKey,
-    };
-
     const userRes = await fetch(`${companyServerUrl}/users`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ username: adminEmail, password: adminTempPassword, email: adminEmail, name: adminName }),
     }).then((r) => r.json());
     if (!userRes.objectId) throw new Error(`Failed creating admin login: ${JSON.stringify(userRes)}`);
-    const userId = userRes.objectId;
+    userId = userRes.objectId;
 
     const tenantRes = await fetch(`${companyServerUrl}/classes/partners_Tenant`, {
       method: 'POST',
@@ -104,7 +110,7 @@ export default async function createCompany(request) {
       }),
     }).then((r) => r.json());
     if (!tenantRes.objectId) throw new Error(`Failed creating tenant: ${JSON.stringify(tenantRes)}`);
-    const tenantId = tenantRes.objectId;
+    tenantId = tenantRes.objectId;
 
     // Order matches OpenSign's real /addadmin signup flow exactly
     // (AddAdmin.js): profile first (without org/team yet), then the
@@ -124,7 +130,7 @@ export default async function createCompany(request) {
       }),
     }).then((r) => r.json());
     if (!profileRes.objectId) throw new Error(`Failed creating admin profile: ${JSON.stringify(profileRes)}`);
-    const profileId = profileRes.objectId;
+    profileId = profileRes.objectId;
 
     const orgRes = await fetch(`${companyServerUrl}/classes/contracts_Organizations`, {
       method: 'POST',
@@ -138,7 +144,7 @@ export default async function createCompany(request) {
       }),
     }).then((r) => r.json());
     if (!orgRes.objectId) throw new Error(`Failed creating organization: ${JSON.stringify(orgRes)}`);
-    const orgId = orgRes.objectId;
+    orgId = orgRes.objectId;
 
     const teamRes = await fetch(`${companyServerUrl}/classes/contracts_Teams`, {
       method: 'POST',
@@ -150,7 +156,7 @@ export default async function createCompany(request) {
       }),
     }).then((r) => r.json());
     if (!teamRes.objectId) throw new Error(`Failed creating team: ${JSON.stringify(teamRes)}`);
-    const teamId = teamRes.objectId;
+    teamId = teamRes.objectId;
 
     const updateProfileRes = await fetch(`${companyServerUrl}/classes/contracts_Users/${profileId}`, {
       method: 'PUT',
@@ -211,15 +217,38 @@ export default async function createCompany(request) {
       backendUrl: companyServerUrl,
     };
   } catch (err) {
-    // Unlike the old per-company-container design, there's no dedicated
-    // container/process to tear down - the mount lives inside the shared
-    // OpenSign container, and there's currently no "unmount" capability
-    // (Parse Server doesn't offer a clean way to detach a live mount).
-    // A failed company's mount, if it got that far, is simply left in
-    // place but harmless: with no matching Company record and an
-    // incomplete admin/tenant chain, nothing can actually log into it.
-    // Only the control-plane record is rolled back here.
+    // Actually delete whatever got created before the failure - not just
+    // the control-plane record. Without this, a failed attempt leaves a
+    // real _User (and possibly tenant/profile/org/team) behind, which
+    // permanently blocks any retry with the same email ("Account already
+    // exists") even though the company itself was never really created.
+    // Deleted in reverse dependency order; each is independently guarded
+    // so one missing/already-gone record doesn't stop the rest from
+    // being cleaned up.
+    const cleanupSteps = [
+      teamId && { url: `${companyServerUrl}/classes/contracts_Teams/${teamId}` },
+      orgId && { url: `${companyServerUrl}/classes/contracts_Organizations/${orgId}` },
+      profileId && { url: `${companyServerUrl}/classes/contracts_Users/${profileId}` },
+      tenantId && { url: `${companyServerUrl}/classes/partners_Tenant/${tenantId}` },
+      userId && { url: `${companyServerUrl}/users/${userId}` },
+    ].filter(Boolean);
+    for (const step of cleanupSteps) {
+      await fetch(step.url, { method: 'DELETE', headers }).catch(() => {});
+    }
+
+    // The live mount itself is left in place (no "unmount" capability),
+    // but that's harmless now that its data has been cleaned up - it's
+    // just an empty, unreachable database with no matching Company record.
     await company.destroy({ useMasterKey: true });
+
+    await writeSystemLog({
+      level: 'error',
+      route: 'functions/createcompany',
+      message: `Company "${companyName}" provisioning failed and was rolled back: ${err.message}`,
+      companyName,
+      meta: { subdomain: slug, cleanedUp: cleanupSteps.map((s) => s.url) },
+    }).catch(() => {});
+
     throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, `Company provisioning failed and was rolled back: ${err.message}`);
   }
 }
