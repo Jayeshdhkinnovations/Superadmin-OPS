@@ -38,7 +38,8 @@ export default async function deleteCompany(request) {
   });
 
   // 2. Permanently drop their entire database.
-  const mongoUri = process.env.MONGODB_URI.replace(/\/[^/]+$/, `/${company.get('databaseName')}`);
+  const baseMongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27030/SuperAdminDB';
+  const mongoUri = baseMongoUri.replace(/\/[^/]+$/, `/${company.get('databaseName')}`);
   const client = new MongoClient(mongoUri);
   await client.connect();
   await client.db().dropDatabase();

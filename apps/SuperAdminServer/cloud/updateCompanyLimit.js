@@ -1,6 +1,7 @@
 import { requireSuperAdmin } from './authGuard.js';
 import { writeAuditLog } from './getAuditLogs.js';
-import { companyMasterKey, companyAppId } from '../Utils.js';
+import { companyMasterKey, companyAppId, openSignInternalUrl } from '../Utils.js';
+
 
 export default async function updateCompanyLimit(request) {
   requireSuperAdmin(request);
@@ -19,19 +20,19 @@ export default async function updateCompanyLimit(request) {
 
   // Propagate the new limit into the company's OWN Tenant record - this is
   // what addUser.js actually enforces against, not the control-plane's copy.
-  const companyServerUrl = `http://localhost:${company.get('port')}`;
+  const companyServerUrl = `${openSignInternalUrl}/app/${company.get('subdomain')}`;
   const headers = {
     'Content-Type': 'application/json',
     'X-Parse-Application-Id': companyAppId,
     'X-Parse-Master-Key': companyMasterKey,
   };
   const tenantQuery = await fetch(
-    `${companyServerUrl}/app/classes/partners_Tenant?where=${encodeURIComponent(JSON.stringify({ TenantName: company.get('companyName') }))}`,
+    `${companyServerUrl}/classes/partners_Tenant?where=${encodeURIComponent(JSON.stringify({ TenantName: company.get('companyName') }))}`,
     { headers }
   ).then((r) => r.json());
   const tenant = tenantQuery.results?.[0];
   if (tenant) {
-    await fetch(`${companyServerUrl}/app/classes/partners_Tenant/${tenant.objectId}`, {
+    await fetch(`${companyServerUrl}/classes/partners_Tenant/${tenant.objectId}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify({ MaxUsers: maxUsers }),
