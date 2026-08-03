@@ -106,6 +106,26 @@ export default async function createCompany(request) {
     if (!tenantRes.objectId) throw new Error(`Failed creating tenant: ${JSON.stringify(tenantRes)}`);
     const tenantId = tenantRes.objectId;
 
+    // Order matches OpenSign's real /addadmin signup flow exactly
+    // (AddAdmin.js): profile first (without org/team yet), then the
+    // organization (which points back at this profile via ExtUserId, the
+    // same as real signup does), then the team, then the profile gets
+    // updated with the org/team it was missing at creation time.
+    const profileRes = await fetch(`${companyServerUrl}/classes/contracts_Users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        UserId: { __type: 'Pointer', className: '_User', objectId: userId },
+        TenantId: { __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId },
+        UserRole: 'contracts_Admin',
+        Email: adminEmail,
+        Name: adminName,
+        Company: companyName,
+      }),
+    }).then((r) => r.json());
+    if (!profileRes.objectId) throw new Error(`Failed creating admin profile: ${JSON.stringify(profileRes)}`);
+    const profileId = profileRes.objectId;
+
     const orgRes = await fetch(`${companyServerUrl}/classes/contracts_Organizations`, {
       method: 'POST',
       headers,
@@ -114,6 +134,7 @@ export default async function createCompany(request) {
         IsActive: true,
         TenantId: { __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId },
         CreatedBy: { __type: 'Pointer', className: '_User', objectId: userId },
+        ExtUserId: { __type: 'Pointer', className: 'contracts_Users', objectId: profileId },
       }),
     }).then((r) => r.json());
     if (!orgRes.objectId) throw new Error(`Failed creating organization: ${JSON.stringify(orgRes)}`);
@@ -131,21 +152,15 @@ export default async function createCompany(request) {
     if (!teamRes.objectId) throw new Error(`Failed creating team: ${JSON.stringify(teamRes)}`);
     const teamId = teamRes.objectId;
 
-    const profileRes = await fetch(`${companyServerUrl}/classes/contracts_Users`, {
-      method: 'POST',
+    const updateProfileRes = await fetch(`${companyServerUrl}/classes/contracts_Users/${profileId}`, {
+      method: 'PUT',
       headers,
       body: JSON.stringify({
-        UserId: { __type: 'Pointer', className: '_User', objectId: userId },
-        TenantId: { __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId },
         OrganizationId: { __type: 'Pointer', className: 'contracts_Organizations', objectId: orgId },
         TeamIds: [{ __type: 'Pointer', className: 'contracts_Teams', objectId: teamId }],
-        UserRole: 'contracts_Admin',
-        Email: adminEmail,
-        Name: adminName,
-        Company: companyName,
       }),
     }).then((r) => r.json());
-    if (!profileRes.objectId) throw new Error(`Failed creating admin profile: ${JSON.stringify(profileRes)}`);
+    if (!updateProfileRes.updatedAt) throw new Error(`Failed updating admin profile with org/team: ${JSON.stringify(updateProfileRes)}`);
 
     // Bootstrap core classes (contracts_Document, contracts_Contactbook,
     // contracts_Template) that only get created on first real use. Without
