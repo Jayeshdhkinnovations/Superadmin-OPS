@@ -73,7 +73,7 @@ export default function Approval() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-base-300 bg-base-200/60">
-                {["Name", "Email", "Company", "Job Title", "Submitted", "Status", ""].map((h) => (
+                {["Name", "Email", "Company", "Job Title", "Max Users", "Submitted", "Status", ""].map((h) => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold tracking-wide text-base-content/60 uppercase">
                     {h}
                   </th>
@@ -82,13 +82,14 @@ export default function Approval() {
             </thead>
             <tbody className="divide-y divide-base-300">
               {isLoading
-                ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} columns={7} />)
+                ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} columns={8} />)
                 : requests.map((req) => (
                     <tr key={req.objectId} className="hover:bg-base-200">
                       <td className="px-4 py-3 font-medium text-base-content">{req.name}</td>
                       <td className="px-4 py-3 text-base-content/70">{req.email}</td>
                       <td className="px-4 py-3 text-base-content/70">{req.companyName}</td>
                       <td className="px-4 py-3 text-base-content/70">{req.jobTitle || "—"}</td>
+                      <td className="px-4 py-3 text-base-content/70">{req.maxUsers ?? 5}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-base-content/70">
                         {formatDate(req.createdAt)}
                       </td>

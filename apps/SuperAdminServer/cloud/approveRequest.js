@@ -9,15 +9,16 @@ export default async function approveRequest(request) {
   if (!requestId) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'requestId is required.');
   }
-  // Self-registered companies all start on the same default seat limit; a
-  // Super Admin can raise it afterwards from the Companies page's Edit
-  // limit action, same as any other company.
-  const maxUsers = 5;
 
   const approvalRequest = await new Parse.Query('ApprovalRequest').get(requestId, { useMasterKey: true });
   if (approvalRequest.get('status') !== 'pending') {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'This request has already been handled.');
   }
+  // The registrant picks their own seat count at signup now; older pending
+  // requests created before that field existed fall back to 5. A Super
+  // Admin can still change it afterwards from the Companies page's Edit
+  // limit action.
+  const maxUsers = approvalRequest.get('maxUsers') || 5;
 
   const result = await provisionCompany({
     companyName: approvalRequest.get('companyName'),
