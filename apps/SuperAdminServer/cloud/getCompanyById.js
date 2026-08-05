@@ -1,4 +1,5 @@
 import { requireSuperAdmin } from './authGuard.js';
+import { getCompanyLiveStats } from './companyStats.js';
 
 export default async function getCompanyById(request) {
   requireSuperAdmin(request);
@@ -8,5 +9,13 @@ export default async function getCompanyById(request) {
 
   const query = new Parse.Query('Company');
   const company = await query.get(id, { useMasterKey: true });
-  return company.toJSON();
+  const stats = await getCompanyLiveStats(company.get('databaseName'));
+
+  return {
+    ...company.toJSON(),
+    currentUserCount: stats.userCount,
+    storageBytes: stats.storageBytes,
+    documentCount: stats.documentsSigned,
+    templates: stats.templates,
+  };
 }

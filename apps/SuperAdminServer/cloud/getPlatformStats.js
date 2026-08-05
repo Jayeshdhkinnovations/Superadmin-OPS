@@ -1,5 +1,5 @@
-import { MongoClient } from 'mongodb';
 import { requireSuperAdmin } from './authGuard.js';
+import { getCompanyLiveStats } from './companyStats.js';
 
 export default async function getPlatformStats(request) {
   requireSuperAdmin(request);
@@ -9,7 +9,6 @@ export default async function getPlatformStats(request) {
 
   const activeCompanies = companies.filter((c) => c.get('status') === 'active').length;
   const suspendedCompanies = companies.filter((c) => c.get('status') === 'suspended').length;
-  const totalUsers = companies.reduce((sum, c) => sum + (c.get('currentUserCount') || 0), 0);
 
   const recentQuery = new Parse.Query('Company');
   recentQuery.descending('createdAt');
@@ -21,46 +20,21 @@ export default async function getPlatformStats(request) {
   errorQuery.greaterThanOrEqualTo('createdAt', new Date(Date.now() - 24 * 60 * 60 * 1000));
   const errorCountLast24h = await errorQuery.count({ useMasterKey: true });
 
-  // Signed documents, templates, and storage all live inside each
-  // company's own isolated database - there's no shared collection to
-  // aggregate from, so connect to each one directly and add it up.
-  // A single unreachable/empty company database shouldn't break the whole
-  // dashboard, so failures here are skipped rather than thrown.
+  // Users, documents, templates, and storage all live inside each company's
+  // own isolated database - connect to each one directly and add it up,
+  // rather than trusting a stored counter that can only go stale (e.g. a
+  // user added straight through OpenSign never touches the Company record).
+  let totalUsers = 0;
   let totalDocumentsSigned = 0;
   let totalTemplates = 0;
   let totalStorageBytes = 0;
 
   for (const company of companies) {
-    const databaseName = company.get('databaseName');
-    if (!databaseName) continue;
-
-    const mongoUri = process.env.MONGODB_URI.replace(/\/[^/]+$/, `/${databaseName}`);
-    const client = new MongoClient(mongoUri);
-    try {
-      await client.connect();
-      const db = client.db();
-      const collections = await db.listCollections({}, { nameOnly: true }).toArray();
-      const names = new Set(collections.map((c) => c.name));
-
-      if (names.has('contracts_Document')) {
-        totalDocumentsSigned += await db
-          .collection('contracts_Document')
-          .countDocuments({ IsCompleted: true });
-      }
-
-      if (names.has('contracts_Template')) {
-        totalTemplates += await db.collection('contracts_Template').countDocuments({});
-      }
-
-      if (names.has('partners_TenantCredits')) {
-        const credits = await db.collection('partners_TenantCredits').find({}).toArray();
-        totalStorageBytes += credits.reduce((sum, c) => sum + (c.usedStorage || 0), 0);
-      }
-    } catch (err) {
-      console.log(`getPlatformStats: skipped ${databaseName}: ${err.message}`);
-    } finally {
-      await client.close();
-    }
+    const stats = await getCompanyLiveStats(company.get('databaseName'));
+    totalUsers += stats.userCount;
+    totalDocumentsSigned += stats.documentsSigned;
+    totalTemplates += stats.templates;
+    totalStorageBytes += stats.storageBytes;
   }
 
   return {

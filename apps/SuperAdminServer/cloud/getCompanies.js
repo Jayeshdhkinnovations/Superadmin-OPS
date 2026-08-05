@@ -1,4 +1,5 @@
 import { requireSuperAdmin } from './authGuard.js';
+import { getCompanyLiveStats } from './companyStats.js';
 
 export default async function getCompanies(request) {
   requireSuperAdmin(request);
@@ -25,8 +26,23 @@ export default async function getCompanies(request) {
     query.count({ useMasterKey: true }),
   ]);
 
+  // currentUserCount/storageBytes on the Company record itself would go
+  // stale the moment a user is added straight through OpenSign - pull the
+  // real, live numbers from each company's own database instead.
+  const withLiveStats = await Promise.all(
+    companies.map(async (c) => {
+      const stats = await getCompanyLiveStats(c.get('databaseName'));
+      return {
+        ...c.toJSON(),
+        currentUserCount: stats.userCount,
+        storageBytes: stats.storageBytes,
+        documentCount: stats.documentsSigned,
+      };
+    })
+  );
+
   return {
-    companies: companies.map((c) => c.toJSON()),
+    companies: withLiveStats,
     total,
     page,
     limit,

@@ -72,21 +72,19 @@ export default function LogTable({ logs, isLoading, onClearFilters }) {
           {isLoading
             ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} columns={COLUMNS} />)
             : logs.map((log) => {
-                const isError = log.level === "error";
                 const isExpanded = expandedId === log.objectId;
+                const statusLabel = log.errorCode ?? (log.level === "error" ? "Error" : "OK");
                 return (
                   <Fragment key={log.objectId}>
                     <tr
-                      onClick={() => isError && setExpandedId(isExpanded ? null : log.objectId)}
-                      className={`transition-colors hover:bg-base-200 ${isError ? "cursor-pointer" : ""}`}
+                      onClick={() => setExpandedId(isExpanded ? null : log.objectId)}
+                      className="cursor-pointer transition-colors hover:bg-base-200"
                     >
                       <td className="px-4 py-3 text-base-content/40">
-                        {isError && (
-                          <ChevronRight
-                            size={14}
-                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                          />
-                        )}
+                        <ChevronRight
+                          size={14}
+                          className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                        />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-base-content/70">
                         {formatDateTime(log.createdAt)}
@@ -98,10 +96,12 @@ export default function LogTable({ logs, isLoading, onClearFilters }) {
                       <td className="px-4 py-3 font-mono text-xs text-base-content/60">
                         {log.route || "—"}
                       </td>
-                      <td className="px-4 py-3 text-base-content/70">{log.statusCode ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={log.level === "error" ? "error" : "info"}>{statusLabel}</Badge>
+                      </td>
                       <td className="max-w-xs truncate px-4 py-3 text-base-content/70">{log.message}</td>
                     </tr>
-                    {isError && isExpanded && <LogDetailRow log={log} columns={COLUMNS} />}
+                    {isExpanded && <LogDetailRow log={log} columns={COLUMNS} />}
                   </Fragment>
                 );
               })}

@@ -128,8 +128,8 @@ export const superAdminService = {
     return Parse.Cloud.run("getapprovalrequests", params);
   },
 
-  approveRequest: async (requestId, maxUsers) => {
-    return Parse.Cloud.run("approverequest", { requestId, maxUsers });
+  approveRequest: async (requestId) => {
+    return Parse.Cloud.run("approverequest", { requestId });
   },
 
   rejectRequest: async (requestId) => {

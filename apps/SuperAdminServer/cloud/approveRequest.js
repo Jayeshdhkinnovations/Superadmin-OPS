@@ -5,10 +5,14 @@ import { writeAuditLog } from './getAuditLogs.js';
 export default async function approveRequest(request) {
   requireSuperAdmin(request);
 
-  const { requestId, maxUsers } = request.params;
-  if (!requestId || !maxUsers || maxUsers < 1) {
-    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'requestId and a positive maxUsers are both required.');
+  const { requestId } = request.params;
+  if (!requestId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'requestId is required.');
   }
+  // Self-registered companies all start on the same default seat limit; a
+  // Super Admin can raise it afterwards from the Companies page's Edit
+  // limit action, same as any other company.
+  const maxUsers = 5;
 
   const approvalRequest = await new Parse.Query('ApprovalRequest').get(requestId, { useMasterKey: true });
   if (approvalRequest.get('status') !== 'pending') {

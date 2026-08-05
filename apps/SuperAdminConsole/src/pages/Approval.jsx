@@ -13,7 +13,6 @@ const STATUS_LABEL = { pending: "Pending", approved: "Approved", rejected: "Reje
 
 export default function Approval() {
   const queryClient = useQueryClient();
-  const [maxUsersByRow, setMaxUsersByRow] = useState({});
   const [busyId, setBusyId] = useState(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -25,14 +24,9 @@ export default function Approval() {
   const requests = data?.requests ?? [];
 
   async function handleApprove(req) {
-    const maxUsers = Number(maxUsersByRow[req.objectId] || 5);
-    if (!maxUsers || maxUsers < 1) {
-      toast.error("Enter a valid Max Users value first.");
-      return;
-    }
     setBusyId(req.objectId);
     try {
-      await superAdminService.approveRequest(req.objectId, maxUsers);
+      await superAdminService.approveRequest(req.objectId);
       toast.success(`${req.companyName} approved and created.`);
       queryClient.invalidateQueries({ queryKey: ["approvalRequests"] });
       queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -79,7 +73,7 @@ export default function Approval() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-base-300 bg-base-200/60">
-                {["Name", "Email", "Company", "Job Title", "Submitted", "Status", "Max Users", ""].map((h) => (
+                {["Name", "Email", "Company", "Job Title", "Submitted", "Status", ""].map((h) => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold tracking-wide text-base-content/60 uppercase">
                     {h}
                   </th>
@@ -88,7 +82,7 @@ export default function Approval() {
             </thead>
             <tbody className="divide-y divide-base-300">
               {isLoading
-                ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} columns={8} />)
+                ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} columns={7} />)
                 : requests.map((req) => (
                     <tr key={req.objectId} className="hover:bg-base-200">
                       <td className="px-4 py-3 font-medium text-base-content">{req.name}</td>
@@ -100,18 +94,6 @@ export default function Approval() {
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={req.status}>{STATUS_LABEL[req.status] ?? req.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          min="1"
-                          placeholder="5"
-                          value={maxUsersByRow[req.objectId] ?? ""}
-                          onChange={(e) =>
-                            setMaxUsersByRow((m) => ({ ...m, [req.objectId]: e.target.value }))
-                          }
-                          className="h-9 w-20 rounded-lg border border-base-300 bg-base-100 px-2 text-sm"
-                        />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
