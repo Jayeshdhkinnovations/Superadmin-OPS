@@ -100,6 +100,16 @@ export default async function provisionCompany({
     if (!userRes.objectId) throw new Error(`Failed creating admin login: ${JSON.stringify(userRes)}`);
     userId = userRes.objectId;
 
+    // The address is already proven at this point - a Super Admin either
+    // typed it when creating the company, or approved a request sent to it.
+    // Without this the account lands in the app showing "Email: not
+    // verified" and prompting for an OTP it never needs.
+    await fetch(`${companyServerUrl}/users/${userId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ emailVerified: true }),
+    }).catch((err) => console.log(`could not mark email verified: ${err.message}`));
+
     const tenantRes = await fetch(`${companyServerUrl}/classes/partners_Tenant`, {
       method: 'POST',
       headers,

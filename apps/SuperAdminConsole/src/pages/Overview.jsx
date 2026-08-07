@@ -3,6 +3,7 @@ import { superAdminService } from "../services/superadmin";
 import StatBar from "../components/overview/StatBar";
 import RecentSignupsList from "../components/overview/RecentSignupsList";
 import ErrorCard from "../components/overview/ErrorCard";
+import PendingApprovalsCard from "../components/overview/PendingApprovalsCard";
 import { SkeletonCard, SkeletonLine } from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
 import { formatBytes, formatNumber } from "../lib/format";
@@ -12,6 +13,14 @@ export default function Overview() {
     queryKey: ["stats"],
     queryFn: superAdminService.getStats,
     staleTime: 60_000,
+  });
+
+  // Same query key the Approval page uses, so approving there refreshes
+  // this card too rather than leaving a stale count on the dashboard.
+  const { data: approvals, isLoading: approvalsLoading } = useQuery({
+    queryKey: ["approvalRequests"],
+    queryFn: () => superAdminService.getApprovalRequests({ status: "pending" }),
+    staleTime: 15_000,
   });
 
   return (
@@ -63,15 +72,21 @@ export default function Overview() {
           )}
         </div>
 
-        {isLoading ? (
-          <SkeletonCard />
-        ) : isError ? (
-          <div className="rounded-3xl border border-base-300 bg-base-100 shadow-sm">
-            <ErrorState message="Couldn't load error count." onRetry={refetch} />
-          </div>
-        ) : (
-          <ErrorCard count={data.errorCountLast24h} />
-        )}
+        <div className="flex flex-col gap-6">
+          <PendingApprovalsCard
+            requests={approvals?.requests ?? []}
+            isLoading={approvalsLoading}
+          />
+          {isLoading ? (
+            <SkeletonCard />
+          ) : isError ? (
+            <div className="rounded-3xl border border-base-300 bg-base-100 shadow-sm">
+              <ErrorState message="Couldn't load error count." onRetry={refetch} />
+            </div>
+          ) : (
+            <ErrorCard count={data.errorCountLast24h} />
+          )}
+        </div>
       </div>
     </div>
   );
