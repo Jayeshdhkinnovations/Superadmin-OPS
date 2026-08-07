@@ -1,6 +1,8 @@
 import { requireSuperAdmin } from './authGuard.js';
 import provisionCompany from './provisionCompany.js';
 import { writeAuditLog } from './getAuditLogs.js';
+import { sendMail } from './mailer.js';
+import { approvalApprovedEmail } from './emailTemplates.js';
 
 export default async function approveRequest(request) {
   requireSuperAdmin(request);
@@ -39,6 +41,19 @@ export default async function approveRequest(request) {
     targetId: requestId,
     after: approvalRequest.toJSON(),
   });
+
+  // Best-effort: the company is already provisioned, so a mail failure must
+  // not surface as a failed approval. Not awaited.
+  const origin = process.env.OPENSIGN_PUBLIC_ORIGIN || '';
+  sendMail(
+    approvalRequest.get('email'),
+    approvalApprovedEmail({
+      name: approvalRequest.get('name'),
+      companyName: approvalRequest.get('companyName'),
+      email: approvalRequest.get('email'),
+      loginUrl: result?.subdomain && origin ? `${origin}/app/${result.subdomain}` : origin,
+    })
+  );
 
   return result;
 }

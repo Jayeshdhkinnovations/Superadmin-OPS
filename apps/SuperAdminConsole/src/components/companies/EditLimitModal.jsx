@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Modal from "../ui/Modal";
 import Field from "../ui/Field";
-import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Button from "../ui/Button";
+import { seatOptionsIncluding, seatLabel } from "../../lib/seats";
 import { superAdminService } from "../../services/superadmin";
 import { toast } from "../../store/toastStore";
 
@@ -53,15 +54,18 @@ function EditLimitForm({ company, onClose }) {
         Current usage: {company.currentUserCount} / {company.maxUsers}
       </p>
       <Field label="Max Users" htmlFor="editMaxUsers" error={error}>
-        <Input
+        <Select
           id="editMaxUsers"
-          type="number"
-          min="1"
-          step="1"
           value={maxUsers}
           invalid={!!error}
           onChange={(e) => setMaxUsers(e.target.value)}
-        />
+        >
+          {seatOptionsIncluding(company.maxUsers).map((n) => (
+            <option key={n} value={n}>
+              {seatLabel(n)}
+            </option>
+          ))}
+        </Select>
       </Field>
       <div className="mt-1 flex items-center justify-end gap-3">
         <Button type="button" variant="secondary" onClick={onClose} disabled={mutation.isPending}>

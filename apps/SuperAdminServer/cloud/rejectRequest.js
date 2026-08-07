@@ -1,5 +1,7 @@
 import { requireSuperAdmin } from './authGuard.js';
 import { writeAuditLog } from './getAuditLogs.js';
+import { sendMail } from './mailer.js';
+import { approvalRejectedEmail } from './emailTemplates.js';
 
 export default async function rejectRequest(request) {
   requireSuperAdmin(request);
@@ -22,6 +24,16 @@ export default async function rejectRequest(request) {
     targetId: requestId,
     after: approvalRequest.toJSON(),
   });
+
+  // Best-effort, not awaited - the rejection is already recorded.
+  sendMail(
+    approvalRequest.get('email'),
+    approvalRejectedEmail({
+      name: approvalRequest.get('name'),
+      companyName: approvalRequest.get('companyName'),
+      reason: request.params.reason,
+    })
+  );
 
   return { rejected: true };
 }

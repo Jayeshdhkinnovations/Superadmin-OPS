@@ -4,7 +4,9 @@ import { z } from "zod";
 import Modal from "../ui/Modal";
 import Field from "../ui/Field";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Button from "../ui/Button";
+import { SEAT_OPTIONS, seatLabel } from "../../lib/seats";
 import { superAdminService } from "../../services/superadmin";
 import { toast } from "../../store/toastStore";
 
@@ -204,16 +206,21 @@ export default function CreateCompanyModal({ open, onClose }) {
             />
           </Field>
           <Field label="Max Users" htmlFor="maxUsers" error={errors.maxUsers}>
-            <Input
+            <Select
               id="maxUsers"
-              type="number"
-              min="1"
-              step="1"
               value={form.maxUsers}
               onChange={(e) => handleChange("maxUsers", e.target.value)}
               invalid={!!errors.maxUsers}
-              placeholder="25"
-            />
+            >
+              <option value="" disabled>
+                Select seats…
+              </option>
+              {SEAT_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {seatLabel(n)}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           <div className="mt-2 flex items-center justify-end gap-3">
