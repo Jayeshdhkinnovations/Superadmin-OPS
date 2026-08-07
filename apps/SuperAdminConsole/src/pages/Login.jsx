@@ -36,9 +36,9 @@ export default function Login() {
       <div className="w-full max-w-sm rounded-2xl border border-base-300 bg-base-100 p-8 shadow-lg">
         <div className="mb-8 flex items-center gap-2.5">
           <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-sm font-semibold text-primary-content">
-            OS
+            ST
           </div>
-          <span className="text-sm font-semibold text-base-content">OpenSign Super Admin</span>
+          <span className="text-sm font-semibold text-base-content">Sign Toowix Super Admin</span>
         </div>
 
         <h1 className="text-xl font-semibold text-base-content">Sign in to the console</h1>
