@@ -4,7 +4,7 @@ import Modal from "../ui/Modal";
 import Field from "../ui/Field";
 import Select from "../ui/Select";
 import Button from "../ui/Button";
-import { seatOptionsIncluding, seatLabel } from "../../lib/seats";
+import { seatTiersIncluding } from "../../lib/seats";
 import { superAdminService } from "../../services/superadmin";
 import { toast } from "../../store/toastStore";
 
@@ -60,9 +60,9 @@ function EditLimitForm({ company, onClose }) {
           invalid={!!error}
           onChange={(e) => setMaxUsers(e.target.value)}
         >
-          {seatOptionsIncluding(company.maxUsers).map((n) => (
-            <option key={n} value={n}>
-              {seatLabel(n)}
+          {seatTiersIncluding(company.maxUsers).map((tier) => (
+            <option key={tier.value} value={tier.value}>
+              {tier.label} Users
             </option>
           ))}
         </Select>

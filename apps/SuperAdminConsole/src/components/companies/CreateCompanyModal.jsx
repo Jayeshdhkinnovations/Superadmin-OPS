@@ -6,7 +6,7 @@ import Field from "../ui/Field";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 import Button from "../ui/Button";
-import { SEAT_OPTIONS, seatLabel } from "../../lib/seats";
+import { SEAT_TIERS } from "../../lib/seats";
 import { superAdminService } from "../../services/superadmin";
 import { toast } from "../../store/toastStore";
 
@@ -215,9 +215,9 @@ export default function CreateCompanyModal({ open, onClose }) {
               <option value="" disabled>
                 Select seats…
               </option>
-              {SEAT_OPTIONS.map((n) => (
-                <option key={n} value={n}>
-                  {seatLabel(n)}
+              {SEAT_TIERS.map((tier) => (
+                <option key={tier.value} value={tier.value}>
+                  {tier.label} Users
                 </option>
               ))}
             </Select>

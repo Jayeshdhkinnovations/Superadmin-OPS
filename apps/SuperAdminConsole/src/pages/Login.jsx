@@ -50,7 +50,7 @@ export default function Login() {
     "w-full rounded-full border border-gray-300 bg-white text-gray-800 placeholder:text-gray-400 focus:border-[#0B3D73] focus:ring-2 focus:ring-[#0B3D73]/15 focus:outline-none transition-colors px-5 py-3 text-[15px]";
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#F7F8FC] p-4 font-['Poppins',system-ui,sans-serif] sm:p-8">
+    <div className="flex min-h-screen w-full justify-center bg-[#F7F8FC] p-4 font-['Poppins',system-ui,sans-serif] sm:p-8">
       {/* Scoped here rather than in the global stylesheet - these two
           animations exist only for this screen. */}
       <style>{`
@@ -63,7 +63,11 @@ export default function Login() {
         }
       `}</style>
 
-      <div className="relative flex w-full max-w-5xl overflow-hidden rounded-[26px] bg-white shadow-[0_40px_80px_-30px_rgba(70,60,160,0.28)]">
+      {/* m-auto rather than the parent's items-center: auto margins centre
+          the card but collapse to 0 once it is taller than the viewport, so
+          a short mobile screen scrolls to the top of the card instead of
+          clipping it. */}
+      <div className="relative m-auto flex w-full max-w-5xl overflow-hidden rounded-[26px] bg-white shadow-[0_40px_80px_-30px_rgba(70,60,160,0.28)]">
         {/* Left hero panel */}
         {!compact && (
           <div className="relative hidden w-[44%] shrink-0 flex-col overflow-hidden rounded-l-[26px] bg-gradient-to-br from-[#0B3D73] to-[#002864] px-8 py-[34px] md:flex">
