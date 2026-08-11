@@ -30,7 +30,9 @@ export default async function deleteCompany(request) {
       'Content-Type': 'application/json',
       'x-internal-secret': openSignInternalAdminSecret,
     },
-    body: JSON.stringify({ slug: company.get('subdomain') }),
+    // purge: a deleted company must leave nothing behind - dropping the
+    // database alone left every signed PDF in its files volume.
+    body: JSON.stringify({ slug: company.get('subdomain'), purge: true }),
   }).catch((err) => {
     // Don't block deletion on this - worst case the mount lingers until
     // the container restarts, same as before this endpoint existed.
