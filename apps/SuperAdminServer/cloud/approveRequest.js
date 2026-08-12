@@ -27,6 +27,7 @@ export default async function approveRequest(request) {
     adminName: approvalRequest.get('name'),
     adminEmail: approvalRequest.get('email'),
     adminPassword: approvalRequest.get('password'),
+    googleUid: approvalRequest.get('googleUid'),
     maxUsers,
     actorEmail: request.user ? request.user.get('email') : 'system',
   });

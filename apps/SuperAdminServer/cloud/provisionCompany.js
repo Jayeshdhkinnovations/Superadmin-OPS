@@ -5,6 +5,7 @@ import {
   openSignInternalUrl,
   openSignPublicOrigin,
   openSignInternalAdminSecret,
+  generateSecureTempPassword,
 } from '../Utils.js';
 import { writeAuditLog } from './getAuditLogs.js';
 import { writeSystemLog } from './getSystemLogs.js';
@@ -18,14 +19,18 @@ export default async function provisionCompany({
   adminName,
   adminEmail,
   adminPassword,
+  // Set when this request came from "Sign in with Google" instead of the
+  // password form - the created _User gets linked to this Google account
+  // via authData instead of (or alongside) a password.
+  googleUid,
   maxUsers,
   actorEmail,
 }) {
   if (!companyMasterKey) {
     throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, 'COMPANY_MASTER_KEY is not configured on SuperAdminServer.');
   }
-  if (!companyName || !adminName || !adminEmail || !adminPassword || !maxUsers || maxUsers < 1) {
-    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'companyName, adminName, adminEmail, adminPassword and a positive maxUsers are all required.');
+  if (!companyName || !adminName || !adminEmail || (!adminPassword && !googleUid) || !maxUsers || maxUsers < 1) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'companyName, adminName, adminEmail, a positive maxUsers, and either adminPassword or googleUid are all required.');
   }
 
   const slug = slugifyCompanyName(companyName);
@@ -92,10 +97,29 @@ export default async function provisionCompany({
     // inside their new mount, via ITS OWN API with master key access - the
     // exact same chain that already happens automatically during normal
     // OpenSign sign-up, just triggered here instead of self-service.
+    // A Google-signed-up account still gets a real (random, never shown)
+    // password - not required for sign-in, but it means "Forgot password"
+    // keeps working as a fallback even for an account that normally signs
+    // in with Google, rather than that account having no recovery path.
+    //
+    // GoogleUid is a plain custom field, deliberately NOT Parse's authData.
+    // Every company mount already has auth.google.clientId configured for
+    // Parse's own built-in Google adapter (index.js, shared across all
+    // mounts), which demands a raw Google id_token validated against that
+    // clientId the instant authData.google is present on a save - a Firebase
+    // ID token is a different, incompatible token (different audience), so
+    // that adapter would reject every one of these saves outright. A custom
+    // field bypasses Parse's auth-provider system entirely.
     const userRes = await fetch(`${companyServerUrl}/users`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ username: adminEmail, password: adminPassword, email: adminEmail, name: adminName }),
+      body: JSON.stringify({
+        username: adminEmail,
+        password: adminPassword || generateSecureTempPassword(),
+        email: adminEmail,
+        name: adminName,
+        ...(googleUid ? { GoogleUid: googleUid } : {}),
+      }),
     }).then((r) => r.json());
     if (!userRes.objectId) throw new Error(`Failed creating admin login: ${JSON.stringify(userRes)}`);
     userId = userRes.objectId;
