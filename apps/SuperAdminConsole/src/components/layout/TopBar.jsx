@@ -13,7 +13,7 @@ export default function TopBar() {
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-base-300 bg-base-100 px-6">
-      <h1 className="text-xl font-semibold text-base-content">Sign Toowix Super Admin</h1>
+      <h1 className="text-xl font-semibold text-base-content">SignToowix Super Admin</h1>
       <div className="flex items-center gap-4">
         <span className="text-sm text-base-content/60">{user?.email}</span>
         <button

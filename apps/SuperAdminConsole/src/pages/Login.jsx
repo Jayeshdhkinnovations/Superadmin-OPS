@@ -75,11 +75,11 @@ export default function Login() {
             <div className="relative z-20">
               <div className="flex items-center gap-3">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-md">
-                  <img src={toowixLogo} alt="Sign Toowix" className="h-7 w-7 object-contain" />
+                  <img src={toowixLogo} alt="SignToowix" className="h-7 w-7 object-contain" />
                 </div>
                 <div>
                   <span className="block text-lg font-bold leading-none tracking-tight text-white">
-                    Sign Toowix
+                    SignToowix
                   </span>
                   <span className="mt-1 block text-[10px] font-medium text-white/80">
                     Super Admin Console
@@ -114,11 +114,11 @@ export default function Login() {
             {compact && (
               <div className="mb-8 flex items-center gap-2.5">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-md">
-                  <img src={toowixLogo} alt="Sign Toowix" className="h-7 w-7 object-contain" />
+                  <img src={toowixLogo} alt="SignToowix" className="h-7 w-7 object-contain" />
                 </div>
                 <div>
                   <span className="block text-lg font-bold leading-none tracking-tight text-gray-800">
-                    Sign Toowix
+                    SignToowix
                   </span>
                   <span className="mt-1 block text-[10px] font-medium text-gray-500">
                     Super Admin Console

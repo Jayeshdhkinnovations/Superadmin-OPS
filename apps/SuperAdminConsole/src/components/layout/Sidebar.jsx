@@ -32,7 +32,7 @@ export default function Sidebar() {
           <img src={toowixLogo} alt="" className="h-7 w-7 object-contain" />
         </span>
         {expanded && (
-          <span className="truncate text-sm font-semibold text-white">Sign Toowix Super Admin</span>
+          <span className="truncate text-sm font-semibold text-white">SignToowix Super Admin</span>
         )}
       </button>
 
