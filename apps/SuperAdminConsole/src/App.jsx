@@ -8,6 +8,7 @@ import Logs from "./pages/Logs";
 import Companies from "./pages/Companies";
 import AuditLog from "./pages/AuditLog";
 import Approval from "./pages/Approval";
+import SubAdmins from "./pages/SubAdmins";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="/companies" element={<Companies />} />
             <Route path="/audit" element={<AuditLog />} />
             <Route path="/approval" element={<Approval />} />
+            <Route path="/sub-admins" element={<SubAdmins />} />
           </Route>
         </Route>
         <Route path="/" element={<Navigate to="/overview" replace />} />

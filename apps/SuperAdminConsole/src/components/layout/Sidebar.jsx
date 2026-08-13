@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, FileText, Building2, ClipboardList, UserCheck } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, ClipboardList, UserCheck, Users } from "lucide-react";
 import toowixLogo from "../../assets/toowix-logo-white.svg";
 
 const NAV_ITEMS = [
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: "Logs", href: "/logs", icon: FileText },
   { label: "Companies", href: "/companies", icon: Building2 },
   { label: "Audit Log", href: "/audit", icon: ClipboardList },
+  { label: "Sub-Admins", href: "/sub-admins", icon: Users },
 ];
 
 export default function Sidebar() {

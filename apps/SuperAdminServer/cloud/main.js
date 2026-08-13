@@ -11,13 +11,19 @@ import { getAuditLogs } from './getAuditLogs.js';
 import getApprovalRequests from './getApprovalRequests.js';
 import approveRequest from './approveRequest.js';
 import rejectRequest from './rejectRequest.js';
+import { createSubAdmin, getSubAdmins, deleteSubAdmin } from './subAdmins.js';
+import {
+  getCompanyNameChangeRequests,
+  approveCompanyNameChange,
+  rejectCompanyNameChange,
+} from './companyNameChange.js';
 import { requireSuperAdmin } from './authGuard.js';
 
 export default async function getme(request) {
   requireSuperAdmin(request);
   return {
     email: request.user ? request.user.get('email') : null,
-    role: 'super_admin',
+    role: request.user ? request.user.get('role') : 'super_admin',
   };
 }
 
@@ -59,3 +65,18 @@ Parse.Cloud.define('getauditlogs', withErrorLogging('getauditlogs', getAuditLogs
 Parse.Cloud.define('getapprovalrequests', withErrorLogging('getapprovalrequests', getApprovalRequests));
 Parse.Cloud.define('approverequest', withErrorLogging('approverequest', approveRequest));
 Parse.Cloud.define('rejectrequest', withErrorLogging('rejectrequest', rejectRequest));
+Parse.Cloud.define('createsubadmin', withErrorLogging('createsubadmin', createSubAdmin));
+Parse.Cloud.define('getsubadmins', withErrorLogging('getsubadmins', getSubAdmins));
+Parse.Cloud.define('deletesubadmin', withErrorLogging('deletesubadmin', deleteSubAdmin));
+Parse.Cloud.define(
+  'getcompanynamechangerequests',
+  withErrorLogging('getcompanynamechangerequests', getCompanyNameChangeRequests)
+);
+Parse.Cloud.define(
+  'approvecompanynamechange',
+  withErrorLogging('approvecompanynamechange', approveCompanyNameChange)
+);
+Parse.Cloud.define(
+  'rejectcompanynamechange',
+  withErrorLogging('rejectcompanynamechange', rejectCompanyNameChange)
+);

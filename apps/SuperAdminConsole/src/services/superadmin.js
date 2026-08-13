@@ -135,4 +135,32 @@ export const superAdminService = {
   rejectRequest: async (requestId) => {
     return Parse.Cloud.run("rejectrequest", { requestId });
   },
+
+  // Sub-admins - separate console accounts with the same access as the
+  // primary admin, created and managed by the primary admin only.
+  getSubAdmins: async () => {
+    return Parse.Cloud.run("getsubadmins");
+  },
+
+  createSubAdmin: async (email, password) => {
+    return Parse.Cloud.run("createsubadmin", { email, password });
+  },
+
+  deleteSubAdmin: async (id) => {
+    return Parse.Cloud.run("deletesubadmin", { id });
+  },
+
+  // Company name change requests - a workspace's name is locked in the
+  // OpenSign dashboard; changing it goes through here.
+  getCompanyNameChangeRequests: async (params) => {
+    return Parse.Cloud.run("getcompanynamechangerequests", params);
+  },
+
+  approveCompanyNameChange: async (requestId) => {
+    return Parse.Cloud.run("approvecompanynamechange", { requestId });
+  },
+
+  rejectCompanyNameChange: async (requestId) => {
+    return Parse.Cloud.run("rejectcompanynamechange", { requestId });
+  },
 };
