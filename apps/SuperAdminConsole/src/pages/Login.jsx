@@ -4,7 +4,7 @@ import { ShieldCheck, Loader2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { USE_MOCKS } from "../services/parseClient";
 import ConsoleIllustration from "../components/ConsoleIllustration";
-import toowixLogo from "../assets/toowix-logo.png";
+import toowixLogo from "../assets/toowix-logo-white.svg";
 
 // Deliberately not the shared Field/Input/Button primitives used elsewhere in
 // the console: this page is styled to match the OpenSign sign-in screen
@@ -74,9 +74,7 @@ export default function Login() {
           <div className="relative hidden w-[44%] shrink-0 flex-col overflow-hidden rounded-l-[26px] bg-gradient-to-br from-[#0B3D73] to-[#002864] px-8 py-[34px] md:flex">
             <div className="relative z-20">
               <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-md">
-                  <img src={toowixLogo} alt="SignToowix" className="h-7 w-7 object-contain" />
-                </div>
+                <img src={toowixLogo} alt="SignToowix" className="h-9 w-9 object-contain shrink-0" />
                 <div>
                   <span className="block text-lg font-bold leading-none tracking-tight text-white">
                     SignToowix
@@ -113,8 +111,8 @@ export default function Login() {
           <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-4">
             {compact && (
               <div className="mb-8 flex items-center gap-2.5">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-md">
-                  <img src={toowixLogo} alt="SignToowix" className="h-7 w-7 object-contain" />
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#0B3D73]">
+                  <img src={toowixLogo} alt="SignToowix" className="h-6 w-6 object-contain" />
                 </div>
                 <div>
                   <span className="block text-lg font-bold leading-none tracking-tight text-gray-800">

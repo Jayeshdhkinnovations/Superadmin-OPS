@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, FileText, Building2, ClipboardList, UserCheck } from "lucide-react";
-import toowixLogo from "../../assets/toowix-logo.png";
+import toowixLogo from "../../assets/toowix-logo-white.svg";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
@@ -28,9 +28,7 @@ export default function Sidebar() {
         title={expanded ? "Collapse sidebar" : "Expand sidebar"}
         className="flex shrink-0 items-center gap-2.5 rounded-xl transition-opacity hover:opacity-80"
       >
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-base-100">
-          <img src={toowixLogo} alt="" className="h-7 w-7 object-contain" />
-        </span>
+        <img src={toowixLogo} alt="" className="h-9 w-9 object-contain shrink-0" />
         {expanded && (
           <span className="truncate text-sm font-semibold text-white">SignToowix Super Admin</span>
         )}
