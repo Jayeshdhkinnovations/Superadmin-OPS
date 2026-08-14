@@ -19,7 +19,13 @@ export async function getCompanyLiveStats(databaseName) {
     const names = new Set(collections.map((c) => c.name));
 
     const [userCount, documentsSigned, templates, dbStats] = await Promise.all([
-      names.has('_User') ? db.collection('_User').countDocuments({}) : 0,
+      // Not _User: sending someone a document to sign creates a _User
+      // record for them even though they never get dashboard access - that
+      // inflated every company's count with signer-only accounts that were
+      // never really "using a seat". contracts_Users is the real membership
+      // table (same rule loginUser.js and googleLoginLookup.js already use
+      // to decide who actually belongs to a company).
+      names.has('contracts_Users') ? db.collection('contracts_Users').countDocuments({}) : 0,
       names.has('contracts_Document')
         ? db.collection('contracts_Document').countDocuments({ IsCompleted: true })
         : 0,
