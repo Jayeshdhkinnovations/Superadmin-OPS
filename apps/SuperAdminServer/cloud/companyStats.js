@@ -18,7 +18,7 @@ export async function getCompanyLiveStats(databaseName) {
     const collections = await db.listCollections({}, { nameOnly: true }).toArray();
     const names = new Set(collections.map((c) => c.name));
 
-    const [userCount, documentsSigned, templates, dbStats] = await Promise.all([
+    const [userCount, documentsSigned, templates, credits] = await Promise.all([
       // Not _User: sending someone a document to sign creates a _User
       // record for them even though they never get dashboard access - that
       // inflated every company's count with signer-only accounts that were
@@ -30,17 +30,24 @@ export async function getCompanyLiveStats(databaseName) {
         ? db.collection('contracts_Document').countDocuments({ IsCompleted: true })
         : 0,
       names.has('contracts_Template') ? db.collection('contracts_Template').countDocuments({}) : 0,
-      db.stats(),
+      // partners_TenantCredits.usedStorage is the same running total OpenSign
+      // itself increments on every upload (Utils.js saveFileUsage) and shows
+      // the admin on their own dashboard - db.stats().dataSize was used here
+      // before, but that's MongoDB's own metadata/document footprint, not
+      // the uploaded files (stored outside Mongo), so it never matched what
+      // the company actually saw as "storage used".
+      names.has('partners_TenantCredits')
+        ? db.collection('partners_TenantCredits').find({}).toArray()
+        : [],
     ]);
+
+    const storageBytes = (credits || []).reduce((sum, c) => sum + (c.usedStorage || 0), 0);
 
     return {
       userCount,
       documentsSigned,
       templates,
-      // dataSize is the real, live footprint of everything stored in this
-      // company's database - a true proxy for "storage used" without
-      // needing OpenSign to track file sizes anywhere itself.
-      storageBytes: dbStats?.dataSize || 0,
+      storageBytes,
     };
   } catch (err) {
     console.log(`getCompanyLiveStats: skipped ${databaseName}: ${err.message}`);
